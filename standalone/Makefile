@@ -3,8 +3,8 @@ include make.inc
 DEFS =
 WRF = ..
 INC = $(WRF)/inc
-FPFLAGS= -I$(NETCDF)/include -I $(INC) -I. 
-LDFLAGS = -L$(NETCDF)/lib -lnetcdff -lnetcdf
+FPFLAGS= -I$(NETCDF)/include -I$(ADIOS2)/include/adios2/fortran -I $(INC) -I. 
+LDFLAGS = -L$(NETCDF)/lib -lnetcdff -lnetcdf -L$(ADIOS2)/lib -ladios2_fortran_mpi -ladios2_fortran
 #LDFLAGS = `$(NETCDF)/bin/nc-config --flibs`
 FFLAGS=$(FPFLAGS) $(FCFLAGS) $(FFREE)
 
@@ -23,6 +23,7 @@ MAKEFILE=Makefile
 ATM_OBJ = \
     module_domain.o \
     wrf_netcdf.o \
+    wrf_adios2.o \
     module_configure.o \
     module_fr_sfire_model.o \
     module_fr_sfire_core.o \
@@ -35,6 +36,7 @@ ATM_OBJ = \
 FIRE_OBJ = \
     module_domain.o \
     wrf_netcdf.o \
+    wrf_adios2.o \
     module_configure.o \
     module_fr_sfire_model.o \
     module_fr_sfire_core.o \
@@ -46,6 +48,7 @@ FIRE_OBJ = \
 
 INIT_OBJ = \
     wrf_netcdf.o \
+    wrf_adios2.o \
     module_configure.o \
     module_fr_sfire_util.o  \
     wrf_fakes.o

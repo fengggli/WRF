@@ -8,9 +8,10 @@ use module_fr_sfire_phys, only: fire_params, init_fuel_cats
 use module_fr_sfire_model, only: sfire_model
 use module_domain, only: domain
 use module_configure, only: grid_config_rec_type,read_namelist
-use wrf_netcdf, only : grid_info, read_info, &
+use wrf_netcdf, only : grid_info, &
                        create_output_file,write_vars, &
-                       read_vars, debug_print
+                       debug_print
+use wrf_adios2, only : read_info, read_vars
 implicit none
 
 contains 
