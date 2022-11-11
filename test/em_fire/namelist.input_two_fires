@@ -1,7 +1,7 @@
  &time_control
  run_days                            = 0,
  run_hours                           = 0,
- run_minutes                         = 60,
+ run_minutes                         = 6,
  run_seconds                         = 0,
  start_year                          = 2006, 0001, 0001,
  start_month                         = 01,   01,   01,
@@ -16,11 +16,11 @@
  end_minute                          = 00,   00,   00,
  end_second                          = 00,   00,   00,
  history_interval_s                  = 120,  30,   30,
- frames_per_outfile                  = 1,     1,    1,
+ frames_per_outfile                  = 10000,     10000,    10000,
  restart                             = .false.,
  restart_interval                    = 120  
- io_form_history                     = 2
- io_form_restart                     = 2
+ io_form_history                     = 14
+ io_form_restart                     = 14
  io_form_input                       = 2
  io_form_boundary                    = 2
 /

@@ -11,7 +11,7 @@ use module_configure, only: grid_config_rec_type,read_namelist
 use wrf_netcdf, only : grid_info, &
                        create_output_file,write_vars, &
                        debug_print
-use wrf_adios2, only : read_info, read_vars
+use wrf_adios2, only : read_info, read_vars, init_adios2, finalize_adios2, adios2_adios
 implicit none
 
 contains 
@@ -418,5 +418,8 @@ end module module_fire_standalone
 
 program fire
 use module_fire_standalone, only: sub_main
+type(adios2_adios) adios
+call init_adios2(adios)
 call  sub_main
+call finalize_adios2(adios)
 end program fire
