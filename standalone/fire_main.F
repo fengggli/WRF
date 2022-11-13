@@ -11,7 +11,7 @@ use module_configure, only: grid_config_rec_type,read_namelist
 use wrf_netcdf, only : grid_info, &
                        create_output_file,write_vars, &
                        debug_print
-use wrf_adios2, only : read_info, read_vars, init_adios2, finalize_adios2, adios2_adios
+use wrf_adios2, only : read_info, read_vars, init_adios2, finalize_adios2
 implicit none
 
 contains 
@@ -54,6 +54,9 @@ logical::restart=.false.,replay=.false.,uniform=.false.
 integer::iframe_start,iframe_end
 logical::run_fuel_moisture=.false.
 
+integer:: ierr
+
+
 !*** executable
 
 call read_namelist(config_flags)           ! read flags from namelist.input
@@ -62,6 +65,8 @@ call set_flags(config_flags)               ! copy configuration flags to sfire i
 debug_print = config_flags%fire_print_msg.ge.2 ! if we write a lot
 debug_print = config_flags%fire_print_msg.ge.1 ! if we write a lot
 
+
+call init_adios2(ierr)
 call read_info(inputfile,info)             ! get dimensions
 
 ! start empty NetCDF file with the dimensions
@@ -301,6 +306,9 @@ do iframe=iframe_start,iframe_end ! interval ending with iframe
   endif
 enddo
 
+
+call finalize_adios2(ierr)
+
 end subroutine sub_main
 
 
@@ -418,8 +426,6 @@ end module module_fire_standalone
 
 program fire
 use module_fire_standalone, only: sub_main
-type(adios2_adios) adios
-call init_adios2(adios)
+
 call  sub_main
-call finalize_adios2(adios)
 end program fire

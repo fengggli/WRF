@@ -154,6 +154,7 @@ subroutine read_info(filename,info)
   !*** local
 
   type(adios2_engine) :: adios2_id
+  type(adios2_attribute):: adios2_attr
 
   integer::ierr,it,ndims,idim,ratio,stagid,i
   integer,dimension(mdims)::dims,sr,dimids,stag
@@ -190,7 +191,7 @@ subroutine read_info(filename,info)
 
   ! attributes
 
-  call adios2_open(adios2_id, ioGet, filename, adios2_mode_read, MPI_COMM_SELF, ierr )
+  call adios2_open(adios2_id, ioGet, filename, adios2_mode_read, ierr )
 
   call att_read(adios2_id,'DX',info%fdx)
   call att_read(adios2_id,'DY',info%fdy)
@@ -206,7 +207,12 @@ subroutine read_info(filename,info)
       if ( i + len(subgrid) .eq. len_trim(dimname)+1) then ! subgrid, need to fix
           stagname=dimname(1:i-1) // '_stag'
           ! TO read dim information from attr
-          call att_read(adios2_id, '__DIM__'//stagname, stag(idim))
+
+          !call check(nf90_get_att(adios2_id,nf90_global,att_name,att_val))
+          call adios2_inquire_attribute(adios2_attr, ioGet, '__DIM__'//stagname, ierr)
+          call adios2_attribute_data(stag(idim), adios2_attr, ierr)
+
+          !call att_read(adios2_id, '__DIM__'//stagname, stag(idim))
           !call check(nf90_inq_dimid(adios2_id, stagname, stagid))
           !call check(nf90_inquire_dimension(adios2_id, stagid, len=stag(idim)))
           sr(idim) = dims(idim)/stag(idim)
@@ -222,7 +228,7 @@ subroutine read_info(filename,info)
     endif
   endif
 
-  call check(adios2_close(adios2_id, ierr))
+  call adios2_close(adios2_id, ierr)
 
   ! store the rest in info
   info%nfirex=dims(1)
@@ -248,26 +254,17 @@ subroutine read_info(filename,info)
 
 end subroutine read_info
 
-subroutine dim_read(adios2_id,dim_name,dim_len)
-character(len=*),intent(in)::dim_name
-integer, intent(in)::adios2_id
-integer,intent(out):: dim_len
-integer:: dim_id
-
-call att_read(adios2_id, '__DIM__'//stagname, stag(idim))
-!call check(nf90_inq_dimid(adios2_id,dim_name,dim_id))
-!call check(nf90_inquire_dimension(adios2_id,dim_id,len=dim_len))
-if(debug_print)write(*,'(a,1x,a,i6)')'dimension',trim(dim_name),dim_len
-end subroutine dim_read
-
 subroutine att_read(adios2_id,att_name,att_val)
-  integer, intent(in)::adios2_id
+  type(adios2_engine), intent(in)::adios2_id
   character(len=*),intent(in)::att_name
   real, intent(out)::att_val
 
+  type(adios2_attribute) :: adios2_attr
+
   integer::ierr
   !call check(nf90_get_att(adios2_id,nf90_global,att_name,att_val))
-  call check(adios2_inquire_attribute(attr_val, adios2_io, att_name, ierr))
+  call adios2_inquire_attribute(adios2_attr, ioGet, att_name, ierr)
+  call adios2_attribute_data(att_val, adios2_attr, ierr)
   if(debug_print)write(*,'(a,1x,a,g20.5)')'attribute',trim(att_name),att_val
 end subroutine att_read
 
@@ -308,7 +305,8 @@ subroutine read_var_info(filename,varname,ndims,dimlengths,dimnames,type)
 
   ! local
   type(adios2_engine) :: adios2_id
-  type(adios2_variable) :: adios_var
+  type(adios2_variable) :: adios2_var
+  type(adios2_attribute) :: adios2_attr
   integer::ierr
 
   integer::varid,dimid,idimids(mdims),idim,i,dimlen,xtype
@@ -316,13 +314,13 @@ subroutine read_var_info(filename,varname,ndims,dimlengths,dimnames,type)
 
   ! executable
   if(debug_print)write(*,'(4a)')'reading file ',trim(filename),' variable ',trim(varname)
-  call adios2_open(adios2_id, ioGet, filename, adios2_mode_read, MPI_COMM_SELF, ierr )
+  call adios2_open(adios2_id, ioGet, filename, adios2_mode_read, ierr )
 
   !call check(nf90_inq_varid(adios2_id, varname, varid))
   !call check(nf90_inquire_variable(adios2_id,varid,ndims=ndims,xtype=xtype))
   call adios2_inquire_variable(adios2_var, ioGet, varname, ierr)
-  if (adios2_var % valid == .false.)
-    call crash('variable not found')
+  !if (adios2_var % valid == .false.)
+   ! call crash('variable not found')
   call adios2_variable_ndims(ndims, adios2_var, ierr)
   call adios2_variable_type(xtype, adios2_var, ierr)
 
@@ -333,18 +331,20 @@ subroutine read_var_info(filename,varname,ndims,dimlengths,dimnames,type)
   1 format(3a,i5,a,(4i6))
   endif
 
-  call check(adios2_inquire_attribute(dimnames, adios2_io, trim(varname)//'/Dims', ierr))
+  call adios2_inquire_attribute(adios2_attr, ioGet, trim(varname)//'/Dims', ierr)
+  call adios2_attribute_data(dimnames, adios2_attr, ierr)
   !call check(nf90_inquire_variable(adios2_id, varid, dimids=idimids))
   do idim=1,ndims
       dimname = dimnames(idim)
       if(debug_print)write(*,'(a,i3,a,i6)')'inquiring dimension ',idim,' name', dimname
       
-      adios2_inquire_attribute(dimlen, adios2_io, '_DIMS_'//dimnames(idim), ierr
+      call adios2_inquire_attribute(adios2_attr, ioGet, '_DIMS_'//dimnames(idim), ierr)
+      call adios2_attribute_data(dimlen, adios2_attr, ierr)
 
       if(debug_print)write(*,'(3a,i5)')'got dimension length',dimlen
       dimlengths(idim) = dimlen  
   enddo
-  call check(adios2_close(adios2_id, ierr))
+  call adios2_close(adios2_id, ierr)
   if(present(type)) type=xtype
   2 format(3a,i4,a,(4i6))
   if(debug_print)write(*,2)'variable ',trim(varname), &
@@ -368,7 +368,9 @@ subroutine read_real(adios2_id,iframe,varname,v)
   real:: val(1)
 
   
-  type(adios2_variable) :: adios_var 
+  type(adios2_variable) :: adios_var
+  integer(kind=8), dimension(1) :: istart, icount
+  integer:: ierr
 
   !*** executable
 
@@ -379,8 +381,10 @@ subroutine read_real(adios2_id,iframe,varname,v)
   !call check(nf90_inq_varid(adios2_id,varname,varid),'cannot find '//trim(varname))
   !call check(nf90_get_var(adios2_id,varid,val,start=(/iframe/),count=(/1/)), &
   !    'error reading '//trim(varname))
-  call check(adios2_inquire_variable(adios_var, ioGet, varname, ierr))
-  call adios2_set_selection(adios_var, 1, /1/, /1/, ierr)
+  istart = (/1/)
+  icount = (/1/)
+  call adios2_inquire_variable(adios_var, ioGet, varname, ierr)
+  call adios2_set_selection(adios_var, 1, istart, icount, ierr)
   call adios2_get(adios2_id, adios_var, val, ierr)
 
   v=val(1)
@@ -403,6 +407,8 @@ subroutine read_fire_var(adios2_id,info,iframe,varname,v)
   !*** local
   integer::varid,nx,ny,start(3),count(3)
   type(adios2_variable) :: adios_var
+  integer(kind=8), dimension(2) :: istart, icount
+  integer:: ierr
 
   !*** executable
   nx=info%nfirex
@@ -416,10 +422,13 @@ subroutine read_fire_var(adios2_id,info,iframe,varname,v)
   !    'error reading '//trim(varname))
   !if(debug_print)write(*,'(a,2i5,a,1x,e15.5,3(1x,a,e15.5))')'dimensions',nx,ny, &
   !     'min',minval(v(1:nx,1:ny)),'max',maxval(v(1:nx,1:ny)),'(1,1)=',v(1,1),'end=',v(nx,ny)
+
+  istart= (/1,1/)
+  icount = (/nx, ny/)
   
-  call check(adios2_inquire_variable(adios_var, adios2_id, varname, ierr))
-  call adios2_set_selection(adios_var, 2, /1,1/, /nx, ny/, ierr)
-  call adios2_get(adios2_id, adios_var, val, ierr)
+  call adios2_inquire_variable(adios_var, ioGet, varname, ierr)
+  call adios2_set_selection(adios_var, 2, istart ,icount, ierr)
+  call adios2_get(adios2_id, adios_var, v, ierr)
   
   end subroutine read_fire_var
 
@@ -439,19 +448,24 @@ subroutine read_vars(filename,info,iframe,grid)
 
   type(adios2_engine) :: adios2_id
   type(adios2_variable) :: adios_var
+  type(adios2_attribute) :: adios2_attr
+
+  integer:: tmp
 
   !*** executable
   if(debug_print_f)write(*,'(3a,i4)')'read_vars: reading file ',trim(filename),' frame ',iframe 
-  call adios2_open(adios2_id, ioGet, filename, adios2_mode_read, MPI_COMM_SELF, ierr)
+  call adios2_open(adios2_id, ioGet, filename, adios2_mode_read, ierr)
 
   !call check(nf90_inq_varid(adios2_id,var_times,varid),'cannot find '//trim(var_times))
   !call check(nf90_get_var(adios2_id,varid,info%times,start=(/1,iframe/),count=(/info%len_time_string,1/)), &
   !    'error reading '//trim(var_times))
-  call adios2_inquire_attribute(info%times, adios2_io, var_times , ierr
+  call adios2_inquire_attribute(adios2_attr, ioGet, var_times , ierr)
+  call adios2_attribute_data(info%times, adios2_attr, ierr)
+
+  ! TODO: I need to print this time
   if(debug_print_f)write(*,'(2a)')'Time ',info%times
 
-  call adios2_begin_step()
-
+  call adios2_begin_step(adios2_id, ierr)
   
   call read_real(adios2_id,iframe,var_unit_fxlong,grid%unit_fxlong)
   call read_real(adios2_id,iframe,var_unit_fxlat,grid%unit_fxlat)
@@ -470,50 +484,21 @@ subroutine read_vars(filename,info,iframe,grid)
 
   call adios2_end_step(adios2_id, ierr)
 
-  call check(adios2_close(adios2_id, ierr))
+  call adios2_close(adios2_id, ierr)
 end subroutine read_vars
 
-!
-!***
-!
-
-subroutine check(adios2_err,msg,cont)
+subroutine init_adios2(ierr)
   implicit none
-  integer,intent(in)::adios2_err
-  character(len=*), optional, intent(in)::msg
-  logical, intent(in), optional::cont
-  character(len=128)::message
-  if(adios2_err.ne.adios2_error_none)then
-    ! write(6,'(2a)')"NetCDF error: ",trim(nf90_strerror(ncerr))
-    write(6,'(2a)')"ADIOS2 error: ",adios2_err)
-    if(present(msg))then
-      message=msg
-    else
-      message="ADIOS2 ERROR"
-    endif
-    if(present(cont))then
-      if(cont)return
-    endif
-    call crash(message)
-  endif
-end subroutine check
-
-!
-!***
-!
-
-subroutine init_adios2(adios)
-  implicit none
-  type(adios2_adios), intent(inout) :: adios
   integer, intent(out) :: ierr
-  call adios2_init(adios, MPI_COMM_WORLD, ierr)
+  call adios2_init(adios, ierr)
+end subroutine init_adios2
 
-subroutine finalize_adios2(adios2)
+subroutine finalize_adios2(ierr)
   implicit none
-  type(adios2_adios), intent(in) :: adios
   integer, intent(out) :: ierr
 
   call adios2_finalize(adios, ierr)
+end subroutine finalize_adios2
 
 
 end module wrf_adios2

@@ -10,6 +10,7 @@ FFLAGS=$(FPFLAGS) $(FCFLAGS) $(FFREE)
 
 MAKEFILE=Makefile
 
+
 # to compile WRF sources
 %.o: $(WRF)/phys/%.F 
 	$(FP) $(FFLAGS) $(DEFS) -E $(WRF)/phys/$*.F | sed 's/^#.*//' > $*.f90
@@ -19,6 +20,7 @@ MAKEFILE=Makefile
 %.o: %.F 
 	$(FP) $(FFLAGS) $(DEFS) -E $*.F | sed 's/^#.*//' > $*.f90
 	$(FC) -c $(FFLAGS) $*.f90
+
 
 ATM_OBJ = \
     module_domain.o \
@@ -147,11 +149,13 @@ fire.o: $(MAKEFILE) \
     module_domain.o \
     module_configure.o \
     wrf_fakes.o \
-    wrf_netcdf.o
+    wrf_netcdf.o \
+	wrf_adios2.o
 
 init.o: $(MAKEFILE) \
     module_configure.o \
     wrf_netcdf.o \
+	wrf_adios2.o \
     module_fr_sfire_util.o
 
 fuel_interp_test_main.o: $(MAKEFILE) \
@@ -162,7 +166,8 @@ model_fuel_interp_test.o: $(MAKEFILE) \
     module_fr_sfire_core.o  \
     module_fr_sfire_util.o \
     wrf_namelist.o \
-    wrf_netcdf.o
+    wrf_netcdf.o \
+	wrf_adios2.o
 
 module_fr_sfire_model.o: $(MAKEFILE) \
     module_fr_sfire_core.o  \
@@ -183,6 +188,9 @@ module_fr_sfire_util.o: $(MAKEFILE) \
     wrf_fakes.o
 
 wrf_netcdf.o: $(MAKEFILE) \
+    module_fr_sfire_util.o
+
+wrf_adios2.o: $(MAKEFILE) \
     module_fr_sfire_util.o
 
 module_fr_sfire_driver.o: $(MAKEFILE) \
