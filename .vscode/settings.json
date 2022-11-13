@@ -1,8 +1,9 @@
 {
     "fortran.linter.includePaths": [
-        "/home/fengggli/software/spack/opt/spack/linux-ubuntu20.04-zen2/gcc-9.3.0/adios2-2.8.0-6zfq4dkvfqxxkrut4ltiyo3pnzz2vax6//include/adios2/fortran"
+        "/home/fengggli/software/spack/opt/spack/linux-ubuntu20.04-zen2/gcc-9.3.0/adios2-2.8.0-6zfq4dkvfqxxkrut4ltiyo3pnzz2vax6//include/adios2/fortran",
+        "${workspaceFolder}/inc"
     ],
     "fortran.linter.extraArgs": [
-        "-free-form"
+        "-ffree-form"
     ]
 }

@@ -48,7 +48,7 @@ integer::  &                ! fire mesh dimensions
   character(len=*),parameter::inputfile='fire_input.nc'
 #endif
 character(len=*),parameter::outputfile='fire_output.nc'
-real, pointer, dimension(:,:) ::  uf1, vf1, uf2, vf2, fmc_g1, fmc_g2   ! stored input fields
+real, pointer, dimension(:,:) ::  uf1=> null(), vf1=> null(), uf2=> null(), vf2=> null(), fmc_g1=> null(), fmc_g2=> null()   ! stored input fields
 
 ! other derived types
 type(grid_info)::info                    ! dimensions, grid controls
