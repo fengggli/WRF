@@ -194,6 +194,7 @@ em_fire : wrf
 	( cd test/em_fire ; /bin/rm -f wrf.exe ; ln -s ../../main/wrf.exe . )
 	( cd test/em_fire ; /bin/rm -f ideal.exe ; ln -s ../../main/ideal.exe . )
 	( cd test/em_fire ; /bin/rm -f README.namelist ; ln -s ../../run/README.namelist . )
+	( cd test/em_fire ; /bin/rm -rf two_fires rain)
 	( cd test/em_fire ; /bin/sh create_links.sh )
 	( cd run ; /bin/rm -f ideal.exe ; ln -s ../main/ideal.exe . )
 	( cd run ; if test -f namelist.input ; then \
