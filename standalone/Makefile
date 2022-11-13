@@ -118,6 +118,7 @@ atm.exe: $(MAKEFILE) atm.o $(FIRE_OBJ)
 	$(FC) $(FCFLAGS) -o atm.exe fire.o $(FIRE_OBJ) $(LDFLAGS)
 
 fire: fire.exe
+
 fire.exe: $(MAKEFILE) fire_main.o $(FIRE_OBJ)
 	$(FC) $(FCFLAGS) -o fire.exe fire_main.o $(FIRE_OBJ) $(LDFLAGS)
 

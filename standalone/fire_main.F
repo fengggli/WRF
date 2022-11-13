@@ -35,7 +35,8 @@ integer::  &                ! fire mesh dimensions
     ifms,ifme,jfms,jfme     ! memory allocated, needs a strip around the patch
 
 ! I/O interface
-character(len=*),parameter::inputfile='fire_input.nc'
+! character(len=*),parameter::inputfile='fire_input.nc'
+character(len=*),parameter::inputfile='fire_input.bp'
 character(len=*),parameter::outputfile='fire_output.nc'
 real, pointer, dimension(:,:) ::  uf1, vf1, uf2, vf2, fmc_g1, fmc_g2   ! stored input fields
 

@@ -16,8 +16,8 @@ character(len=*),parameter::outputfile='fire_output.nc'
 ! the same (incorrect) sizes that wrf outputs and same dimension names 
 ! 
 logical::compat_fire_grid=.true.
-logical::debug_print=.false.
-logical::debug_print_f=.true.
+logical::debug_print=.true.
+logical::debug_print_f=.false.
 logical::read_check=.false.
 
 ! output variable type
@@ -171,11 +171,13 @@ subroutine read_info(filename,info)
 
   ! get time string information
   ! We don't have this dim, instead read
-  call read_var_info(filename,var_times,ndims,dims,dimnames)
-  if(ndims.ne.2)call crash(trim(var_times)//' must have 2 dimensions')
-  info%dim_time_string = dimnames(1)
-  info%len_time_string = dims(1)
-  if(dims(1).gt.max_times_length)call crash('time string too long')
+  !call read_var_info(filename,var_times,ndims,dims,dimnames)
+  !if(ndims.ne.2)call crash(trim(var_times)//' must have 2 dimensions')
+  !info%dim_time_string = dimnames(1)
+  !info%len_time_string = dims(1)
+  !if(dims(1).gt.max_times_length)call crash('time string too long')
+  info%dim_time_string = "Time"
+  info%len_time_string = 1
     
   ! get dimensions
   ! NFUEL_CAT
@@ -310,19 +312,29 @@ subroutine read_var_info(filename,varname,ndims,dimlengths,dimnames,type)
   integer::ierr
 
   integer::varid,dimid,idimids(mdims),idim,i,dimlen,xtype
+  integer ,allocatable :: Buffer(:)
   character(len=NF90_MAX_NAME)::dimname
+
+  allocate(Buffer(1), STAT=ierr)
 
   ! executable
   if(debug_print)write(*,'(4a)')'reading file ',trim(filename),' variable ',trim(varname)
   call adios2_open(adios2_id, ioGet, filename, adios2_mode_read, ierr )
+  call check(ierr)
 
   !call check(nf90_inq_varid(adios2_id, varname, varid))
   !call check(nf90_inquire_variable(adios2_id,varid,ndims=ndims,xtype=xtype))
   call adios2_inquire_variable(adios2_var, ioGet, varname, ierr)
+  call check(ierr)
   !if (adios2_var % valid == .false.)
    ! call crash('variable not found')
+
+  write (*,*) "Query dims!"
   call adios2_variable_ndims(ndims, adios2_var, ierr)
   call adios2_variable_type(xtype, adios2_var, ierr)
+  write(*, *) "ndims: ", ndims, "xtype", xtype
+
+
 
 
   if(ndims.gt.mdims)then
@@ -332,14 +344,21 @@ subroutine read_var_info(filename,varname,ndims,dimlengths,dimnames,type)
   endif
 
   call adios2_inquire_attribute(adios2_attr, ioGet, trim(varname)//'/Dims', ierr)
+  call check(ierr)
   call adios2_attribute_data(dimnames, adios2_attr, ierr)
+  call check(ierr)
+  
   !call check(nf90_inquire_variable(adios2_id, varid, dimids=idimids))
   do idim=1,ndims
       dimname = dimnames(idim)
-      if(debug_print)write(*,'(a,i3,a,i6)')'inquiring dimension ',idim,' name', dimname
+      if(debug_print)write(*,'(a,i3,a,a)')'inquiring dimension ',idim,' name', dimname
       
-      call adios2_inquire_attribute(adios2_attr, ioGet, '_DIMS_'//dimnames(idim), ierr)
-      call adios2_attribute_data(dimlen, adios2_attr, ierr)
+      call adios2_inquire_attribute(adios2_attr, ioGet, '_DIM_'//dimnames(idim), ierr)
+      call check(ierr, msg="Inquire Attribute: "//'_DIM_'//dimnames(idim))
+      
+      call adios2_attribute_data(Buffer, adios2_attr, ierr)
+      call check(ierr)
+      dimlen = Buffer(1)
 
       if(debug_print)write(*,'(3a,i5)')'got dimension length',dimlen
       dimlengths(idim) = dimlen  
@@ -349,6 +368,8 @@ subroutine read_var_info(filename,varname,ndims,dimlengths,dimnames,type)
   2 format(3a,i4,a,(4i6))
   if(debug_print)write(*,2)'variable ',trim(varname), &
     ' type',xtype,' dimensions ',(dimlengths(idim),idim=1,ndims)
+  
+    deallocate(Buffer, STAT=ierr)
 end subroutine read_var_info
 
 !
@@ -486,6 +507,28 @@ subroutine read_vars(filename,info,iframe,grid)
 
   call adios2_close(adios2_id, ierr)
 end subroutine read_vars
+
+
+subroutine check(ierr,msg,cont)
+  implicit none
+  integer,intent(in)::ierr
+  character(len=*), optional, intent(in)::msg
+  logical, intent(in), optional::cont
+  character(len=128)::message
+  if(ierr.ne.(adios2_error_none))then
+    write(*,*) "ADIOS2 error, type=", ierr
+    !write(6,'(2I)')"ADIOSs error: ",ierr
+    if(present(msg))then
+      message=msg
+    else
+      message="ADIOS2 ERROR"
+    endif
+    if(present(cont))then
+      if(cont)return
+    endif
+    call crash(message)
+  endif
+  end subroutine check
 
 subroutine init_adios2(ierr)
   implicit none
