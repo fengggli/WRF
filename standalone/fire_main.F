@@ -11,7 +11,13 @@ use module_configure, only: grid_config_rec_type,read_namelist
 use wrf_netcdf, only : grid_info, &
                        create_output_file,write_vars, &
                        debug_print
+!#define USE_AIDOS2
+
+#ifdef USE_AIDOS2
 use wrf_adios2, only : read_info, read_vars, init_adios2, finalize_adios2
+#else
+  use wrf_netcdf, only: read_info, read_vars
+#endif
 implicit none
 
 contains 
@@ -36,7 +42,11 @@ integer::  &                ! fire mesh dimensions
 
 ! I/O interface
 ! character(len=*),parameter::inputfile='fire_input.nc'
-character(len=*),parameter::inputfile='fire_input.bp'
+#ifdef USE_ADIOS2
+  character(len=*),parameter::inputfile='fire_input.bp'
+#else
+  character(len=*),parameter::inputfile='fire_input.nc'
+#endif
 character(len=*),parameter::outputfile='fire_output.nc'
 real, pointer, dimension(:,:) ::  uf1, vf1, uf2, vf2, fmc_g1, fmc_g2   ! stored input fields
 
@@ -66,8 +76,9 @@ call set_flags(config_flags)               ! copy configuration flags to sfire i
 debug_print = config_flags%fire_print_msg.ge.2 ! if we write a lot
 debug_print = config_flags%fire_print_msg.ge.1 ! if we write a lot
 
-
+#ifdef USE_AIDOS2 
 call init_adios2(ierr)
+#endif
 call read_info(inputfile,info)             ! get dimensions
 
 ! start empty NetCDF file with the dimensions
@@ -307,8 +318,9 @@ do iframe=iframe_start,iframe_end ! interval ending with iframe
   endif
 enddo
 
-
+#ifdef USE_AIDOS2
 call finalize_adios2(ierr)
+#endif
 
 end subroutine sub_main
 
