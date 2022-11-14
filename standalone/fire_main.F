@@ -11,7 +11,7 @@ use module_configure, only: grid_config_rec_type,read_namelist
 use wrf_netcdf, only : grid_info, &
                        create_output_file,write_vars, &
                        debug_print
-#define USE_ADIOS2
+!#define USE_ADIOS2
 
 #ifdef USE_ADIOS2
 use wrf_adios2, only : read_info, read_vars, init_adios2, finalize_adios2

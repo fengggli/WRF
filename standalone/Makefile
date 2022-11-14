@@ -16,6 +16,10 @@ MAKEFILE=Makefile
 	$(FP) $(FFLAGS) $(DEFS) -E $(WRF)/phys/$*.F | sed 's/^#.*//' > $*.f90
 	$(FC) -c $(FFLAGS) $*.f90
 
+fire_main_adios2.o: fire_main.F 
+	$(FP) $(FFLAGS) -DUSE_ADIOS2 -E fire_main.F | sed 's/^#.*//' > fire_main_adios2.f90
+	$(FC) -c $(FFLAGS) fire_main_adios2.f90
+
 # to compile local sources
 %.o: %.F 
 	$(FP) $(FFLAGS) $(DEFS) -E $*.F | sed 's/^#.*//' > $*.f90
@@ -117,10 +121,13 @@ atm: atm.exe
 atm.exe: $(MAKEFILE) atm.o $(FIRE_OBJ)
 	$(FC) $(FCFLAGS) -o atm.exe fire.o $(FIRE_OBJ) $(LDFLAGS)
 
-fire: fire.exe
+fire: fire.exe fire-adios2.exe
 
 fire.exe: $(MAKEFILE) fire_main.o $(FIRE_OBJ)
 	$(FC) $(FCFLAGS) -o fire.exe fire_main.o $(FIRE_OBJ) $(LDFLAGS)
+
+fire-adios2.exe: $(MAKEFILE) fire_main_adios2.o $(FIRE_OBJ)
+	$(FC) $(FCFLAGS) -o fire-adios2.exe fire_main_adios2.o $(FIRE_OBJ) $(LDFLAGS)
 
 init.exe: $(MAKEFILE) init.o $(INIT_OBJ)
 	$(FC) $(FCFLAGS) -o init.exe init.o $(INIT_OBJ) $(LDFLAGS)

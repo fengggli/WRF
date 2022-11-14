@@ -492,6 +492,7 @@ if(compat_fire_grid)then
   do idim=1,2
     dimname=dimnames(idim)
     i=index(dimname,subgrid,.true.)
+    write (*,*) "len of subgrid,", len(subgrid), "len of dimname", len_trim(dimname)
     if ( i + len(subgrid) .eq. len_trim(dimname)+1) then ! subgrid, need to fix
         stagname=dimname(1:i-1) // '_stag'
         call check(nf90_inq_dimid(ncid, stagname, stagid))

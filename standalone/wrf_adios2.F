@@ -206,6 +206,7 @@ subroutine read_info(filename,info)
     do idim=1,2
       dimname=dimnames(idim)
       i=index(dimname,subgrid,.true.)
+      write (*,*) "len of subgrid,", len(subgrid), "len of dimname", len_trim(dimname)
       if ( i + len(subgrid) .eq. len_trim(dimname)+1) then ! subgrid, need to fix
           stagname=dimname(1:i-1) // '_stag'
           ! TO read dim information from attr
@@ -350,6 +351,7 @@ subroutine read_var_info(filename,varname,ndims,dimlengths,dimnames,type)
   
   !call check(nf90_inquire_variable(adios2_id, varid, dimids=idimids))
   do idim=1,ndims
+      dimnames(idim) = trim(dimnames(idim))
       dimname = dimnames(idim)
       if(debug_print)write(*,'(a,i3,a,a)')'inquiring dimension ',idim,' name', dimname
       
