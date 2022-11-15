@@ -212,8 +212,10 @@ subroutine read_info(filename,info)
           ! TO read dim information from attr
 
           !call check(nf90_get_att(adios2_id,nf90_global,att_name,att_val))
-          call adios2_inquire_attribute(adios2_attr, ioGet, '__DIM__'//stagname, ierr)
+          call adios2_inquire_attribute(adios2_attr, ioGet, '_DIM_'//stagname, ierr)
+          call check(ierr)
           call adios2_attribute_data(stag(idim), adios2_attr, ierr)
+          call check(ierr)
 
           !call att_read(adios2_id, '__DIM__'//stagname, stag(idim))
           !call check(nf90_inq_dimid(adios2_id, stagname, stagid))
@@ -293,6 +295,8 @@ subroutine print_var_info(filename,varname)
 end subroutine print_var_info
 
 
+
+
 subroutine read_var_info(filename,varname,ndims,dimlengths,dimnames,type)
 
   ! get variable dimensions from a file
@@ -315,6 +319,7 @@ subroutine read_var_info(filename,varname,ndims,dimlengths,dimnames,type)
   integer::varid,dimid,idimids(mdims),idim,i,dimlen,xtype
   integer ,allocatable :: Buffer(:)
   character(len=NF90_MAX_NAME)::dimname
+  character(len=NF90_MAX_NAME)::Buffer_dimnames(mdims)
 
   allocate(Buffer(1), STAT=ierr)
 
@@ -346,14 +351,16 @@ subroutine read_var_info(filename,varname,ndims,dimlengths,dimnames,type)
 
   call adios2_inquire_attribute(adios2_attr, ioGet, trim(varname)//'/Dims', ierr)
   call check(ierr)
-  call adios2_attribute_data(dimnames, adios2_attr, ierr)
+  call adios2_attribute_data(Buffer_dimnames, adios2_attr, ierr)
   call check(ierr)
   
   !call check(nf90_inquire_variable(adios2_id, varid, dimids=idimids))
   do idim=1,ndims
-      dimnames(idim) = trim(dimnames(idim))
+      dimnames(idim) = ctrim(Buffer_dimnames(idim))
+      write (*,*) LEN(Buffer_dimnames(idim)), LEN(dimnames(idim))
       dimname = dimnames(idim)
-      if(debug_print)write(*,'(a,i3,a,a)')'inquiring dimension ',idim,' name', dimname
+
+      if(debug_print)write(*,*) 'inquiring dimension ',idim,' name', TRIM(dimname), ', dim_name length=', LEN_TRIM(dimname)
       
       call adios2_inquire_attribute(adios2_attr, ioGet, '_DIM_'//dimnames(idim), ierr)
       call check(ierr, msg="Inquire Attribute: "//'_DIM_'//dimnames(idim))
@@ -362,7 +369,7 @@ subroutine read_var_info(filename,varname,ndims,dimlengths,dimnames,type)
       call check(ierr)
       dimlen = Buffer(1)
 
-      if(debug_print)write(*,'(3a,i5)')'got dimension length',dimlen
+      if(debug_print)write(*,*) 'got dimension length',dimlen
       dimlengths(idim) = dimlen  
   enddo
   call adios2_close(adios2_id, ierr)
@@ -373,6 +380,22 @@ subroutine read_var_info(filename,varname,ndims,dimlengths,dimnames,type)
   
     deallocate(Buffer, STAT=ierr)
 end subroutine read_var_info
+
+! https://community.intel.com/t5/Intel-Fortran-Compiler/How-to-remove-NUL-character-from-end-of-variable-in-output-file/td-p/1179485
+function ctrim(instring) result(outstring)
+  implicit none
+  character(len=*), intent(in) :: instring
+  character(len=len(instring)) :: outstring
+
+  integer :: pos
+
+  pos = index( instring, achar(0) )
+  if ( pos > 0 ) then
+      outstring = instring(1:pos-1)
+  else 
+      outstring = instring
+  endif
+end function ctrim
 
 !
 !***
