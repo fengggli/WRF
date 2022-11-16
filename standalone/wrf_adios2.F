@@ -410,7 +410,7 @@ subroutine read_real(adios2_id,iframe,varname,v)
   implicit none
   !*** arguments
   type(adios2_engine), intent(in)::adios2_id             ! id of netcdf file open in data mode
-  integer, intent(in):: iframe          ! number of frame in the file
+  integer, intent(inout):: iframe          ! number of frame in the file
   character(len=*),intent(in)::varname  ! the variable name
   real :: v                ! value
   !*** local
@@ -451,7 +451,7 @@ subroutine read_fire_var(adios2_id,info,iframe,varname,v)
   !*** arguments
   type(adios2_engine), intent(in)::adios2_id              ! id of netcdf file open in data mode
   type(grid_info),intent(in)::info      ! dimensions
-  integer, intent(in):: iframe          ! number of frame in the file
+  integer, intent(inout):: iframe          ! number of frame in the file
   character(len=*),intent(in)::varname  ! the variable name
   real, pointer :: v(:,:)            ! values
   !*** local
@@ -495,18 +495,22 @@ subroutine read_fire_var(adios2_id,info,iframe,varname,v)
   
   end subroutine read_fire_var
 
-subroutine read_vars(filename,info,iframe,grid)
+subroutine read_step_vars(filename,info, iframe, grid, ierr)
   ! read all variables from input file
+  ! compared with the netcdf version, this doesn't not have a iframe (cannot specify which step to read)
+  ! but calling this function once will advance a step (iframe will +=1)
+  ! when ierr != 0, 
   implicit none
 
   !*** arguments
   character(len=*),intent(in)::filename ! the input file
   type(grid_info),intent(inout)::info   ! dimensions
-  integer, intent(in):: iframe          ! number of frame in the file (not used by ADIOS2)
+  integer, intent(inout):: iframe          ! number of frame in the file (not used by ADIOS2)
   type(domain),intent(inout)::grid      ! the mother of all arrays
+  integer, intent(out)::ierr ! need to check whether it's the end
 
   !*** local
-  integer::varid,ierr
+  integer::varid
   integer,dimension(4)::s,c
 
   type(adios2_engine) :: adios2_id
@@ -516,7 +520,7 @@ subroutine read_vars(filename,info,iframe,grid)
   integer:: tmp
 
   !*** executable
-  if(debug_print_f)write(*,'(3a,i4)')'read_vars: reading file ',trim(filename),' frame ',iframe 
+  if(debug_print_f)write(*,'(3a,i4)')'read_step_vars: reading file ',trim(filename) 
   call adios2_open(adios2_id, ioGet, filename, adios2_mode_read, ierr)
 
   !call check(nf90_inq_varid(adios2_id,var_times,varid),'cannot find '//trim(var_times))
@@ -550,10 +554,12 @@ subroutine read_vars(filename,info,iframe,grid)
   call read_fire_var(adios2_id,info,iframe,var_uf,grid%uf) 
   call read_fire_var(adios2_id,info,iframe,var_vf,grid%vf) 
 
+  iframe = iframe +1
+
   call adios2_end_step(adios2_id, ierr)
 
   call adios2_close(adios2_id, ierr)
-end subroutine read_vars
+end subroutine read_step_vars
 
 
 subroutine check(ierr,msg,cont)

@@ -14,7 +14,7 @@ use wrf_netcdf, only : grid_info, &
 !#define USE_ADIOS2
 
 #ifdef USE_ADIOS2
-use wrf_adios2, only : read_info, read_vars, init_adios2, finalize_adios2
+use wrf_adios2, only : read_info, read_step_vars, init_adios2, finalize_adios2
 #else
   use wrf_netcdf, only: read_info, read_vars
 #endif
@@ -67,6 +67,12 @@ logical::run_fuel_moisture=.false.
 
 integer:: ierr
 
+#ifdef USE_ADIOS2 
+integer::cur_step=1
+
+call init_adios2(ierr)
+#endif
+
 
 !*** executable
 
@@ -76,9 +82,7 @@ call set_flags(config_flags)               ! copy configuration flags to sfire i
 debug_print = config_flags%fire_print_msg.ge.2 ! if we write a lot
 debug_print = config_flags%fire_print_msg.ge.1 ! if we write a lot
 
-#ifdef USE_ADIOS2 
-call init_adios2(ierr)
-#endif
+
 call read_info(inputfile,info)             ! get dimensions
 
 ! start empty NetCDF file with the dimensions
@@ -212,12 +216,22 @@ call create_output_file(outputfile,info)
 if(info%ntimes.lt.3)then
   !call crash('need at least 3 steps')
   uniform=.true.
+#ifdef USE_ADIOS2
+  call read_step_vars(inputfile, info, cur_step, grid, ierr)
+#else
   call read_vars(inputfile,info,1,grid)
+#endif
   iframe_start=1
   iframe_end=int(duration_s/frame_s)
 else
   uniform=.false.
+  ! advances to the third step
+#ifdef USE_ADIOS2
+  call read_step_vars(inputfile, info, cur_step, grid, ierr)
+  call read_step_vars(inputfile, info, cur_step, grid, ierr)
+#else
   call read_vars(inputfile,info,2,grid)
+#endif
   iframe_start=3
   write(*,'(a)')'starting from frame 3 because need to interpolate between frames and frame 1 may be invalid'
   iframe_end=info%ntimes
@@ -250,7 +264,11 @@ itimestep = 0
 ifun_start=1
 do iframe=iframe_start,iframe_end ! interval ending with iframe
   if(.not.uniform)then
+#ifdef USE_ADIOS2
+    call read_step_vars(inputfile, info, cur_step, grid, ierr)
+#else
     call read_vars(inputfile,info,iframe,grid)
+#endif
     uf2=grid%uf
     vf2=grid%vf
     fmc_g2=grid%fmc_g
