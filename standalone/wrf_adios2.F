@@ -17,7 +17,7 @@ character(len=*),parameter::outputfile='fire_output.nc'
 ! 
 logical::compat_fire_grid=.true.
 logical::debug_print=.false.
-logical::debug_print_f=.false.
+logical::debug_print_f=.true.
 logical::read_check=.false.
 
 ! output variable type
@@ -458,7 +458,9 @@ subroutine read_fire_var(adios2_id,info,iframe,varname,v)
   integer::varid,nx,ny,start(3),count(3)
   type(adios2_variable) :: adios_var
   integer(kind=8), dimension(2) :: istart, icount
-  integer:: ierr
+  integer:: ierr, i, j
+
+  real, pointer:: v2(:,:)
 
   !*** executable
   nx=info%nfirex
@@ -475,10 +477,21 @@ subroutine read_fire_var(adios2_id,info,iframe,varname,v)
 
   istart= (/0,0/)
   icount = (/nx, ny/)
+
+  allocate(v2(nx, ny))
   
   call adios2_inquire_variable(adios_var, ioGet, varname, ierr)
+  call check(ierr)
   call adios2_set_selection(adios_var, 2, istart ,icount, ierr)
-  call adios2_get(adios2_id, adios_var, v, ierr)
+  call check(ierr)
+  call adios2_get(adios2_id, adios_var, v2, adios2_mode_sync,ierr)
+
+  do j=1,ny
+    do i=1,nx
+      v(i,j)=v2(i,j)
+    enddo
+  enddo
+  call check(ierr)
   
   end subroutine read_fire_var
 
