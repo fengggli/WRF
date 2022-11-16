@@ -16,7 +16,7 @@ character(len=*),parameter::outputfile='fire_output.nc'
 ! the same (incorrect) sizes that wrf outputs and same dimension names 
 ! 
 logical::compat_fire_grid=.true.
-logical::debug_print=.true.
+logical::debug_print=.false.
 logical::debug_print_f=.false.
 logical::read_check=.false.
 
@@ -176,8 +176,8 @@ subroutine read_info(filename,info)
   !info%dim_time_string = dimnames(1)
   !info%len_time_string = dims(1)
   !if(dims(1).gt.max_times_length)call crash('time string too long')
-  info%dim_time_string = "Time"
-  info%len_time_string = 1
+  info%dim_time_string = "DateStrLen"
+  info%len_time_string = LEN_TRIM(info%dim_time_string)
     
   ! get dimensions
   ! NFUEL_CAT
@@ -186,10 +186,12 @@ subroutine read_info(filename,info)
   ! store in info what you can now
   info%io_nfirex=dims(1)
   info%io_nfirey=dims(2)
-  info%ntimes=dims(3)
+  !info%ntimes=dims(3)
+  info%ntimes=61
   info%dim_fire_x=dimnames(1)
   info%dim_fire_y=dimnames(2)
-  info%dim_time=dimnames(3)
+  !info%dim_time=dimnames(3)
+  info%dim_time="Time"
 
   ! attributes
 
@@ -269,7 +271,9 @@ subroutine att_read(adios2_id,att_name,att_val)
   integer::ierr
   !call check(nf90_get_att(adios2_id,nf90_global,att_name,att_val))
   call adios2_inquire_attribute(adios2_attr, ioGet, att_name, ierr)
+  call check(ierr)
   call adios2_attribute_data(att_val, adios2_attr, ierr)
+  call check(ierr)
   if(debug_print)write(*,'(a,1x,a,g20.5)')'attribute',trim(att_name),att_val
 end subroutine att_read
 
@@ -427,7 +431,7 @@ subroutine read_real(adios2_id,iframe,varname,v)
   !call check(nf90_inq_varid(adios2_id,varname,varid),'cannot find '//trim(varname))
   !call check(nf90_get_var(adios2_id,varid,val,start=(/iframe/),count=(/1/)), &
   !    'error reading '//trim(varname))
-  istart = (/1/)
+  istart = (/0/)
   icount = (/1/)
   call adios2_inquire_variable(adios_var, ioGet, varname, ierr)
   call adios2_set_selection(adios_var, 1, istart, icount, ierr)
@@ -469,7 +473,7 @@ subroutine read_fire_var(adios2_id,info,iframe,varname,v)
   !if(debug_print)write(*,'(a,2i5,a,1x,e15.5,3(1x,a,e15.5))')'dimensions',nx,ny, &
   !     'min',minval(v(1:nx,1:ny)),'max',maxval(v(1:nx,1:ny)),'(1,1)=',v(1,1),'end=',v(nx,ny)
 
-  istart= (/1,1/)
+  istart= (/0,0/)
   icount = (/nx, ny/)
   
   call adios2_inquire_variable(adios_var, ioGet, varname, ierr)
@@ -505,12 +509,17 @@ subroutine read_vars(filename,info,iframe,grid)
   !call check(nf90_inq_varid(adios2_id,var_times,varid),'cannot find '//trim(var_times))
   !call check(nf90_get_var(adios2_id,varid,info%times,start=(/1,iframe/),count=(/info%len_time_string,1/)), &
   !    'error reading '//trim(var_times))
+#if 0
   call adios2_inquire_attribute(adios2_attr, ioGet, var_times , ierr)
+  call check(ierr)
   call adios2_attribute_data(info%times, adios2_attr, ierr)
+  call check(ierr)
+#else
+  info%times="TimeADIOS2Steps"
 
   ! TODO: I need to print this time
   if(debug_print_f)write(*,'(2a)')'Time ',info%times
-
+#endif
   call adios2_begin_step(adios2_id, ierr)
   
   call read_real(adios2_id,iframe,var_unit_fxlong,grid%unit_fxlong)
