@@ -267,6 +267,10 @@ do iframe=iframe_start,iframe_end ! interval ending with iframe
   if(.not.uniform)then
 #ifdef USE_ADIOS2
     call read_step_vars(inputfile, info, cur_step, grid, ierr)
+    if (ierr == 2) then ! "2" is adios2_step_status_end_of_stream
+      write(*, *) 'not more steps, now exiting !'
+      exit
+    endif
 #else
     call read_vars(inputfile,info,iframe,grid)
 #endif

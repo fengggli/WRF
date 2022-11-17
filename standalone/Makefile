@@ -3,7 +3,7 @@ include make.inc
 DEFS =
 WRF = ..
 INC = $(WRF)/inc
-FPFLAGS= -I$(NETCDF)/include -I$(ADIOS2)/include/adios2/fortran -I $(INC) -I. 
+FPFLAGS= -I$(NETCDF)/include -DADIOS2_USE_MPI -I$(ADIOS2)/include/adios2/fortran  -I $(INC) -I. 
 LDFLAGS = -L$(NETCDF)/lib -lnetcdff -lnetcdf -L$(ADIOS2)/lib -ladios2_fortran_mpi -ladios2_fortran
 #LDFLAGS = `$(NETCDF)/bin/nc-config --flibs`
 FFLAGS=$(FPFLAGS) $(FCFLAGS) $(FFREE)

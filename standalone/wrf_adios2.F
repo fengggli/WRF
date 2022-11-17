@@ -6,7 +6,11 @@ use adios2
 use module_fr_sfire_util , only : crash, interpolate_2d, continue_at_boundary
 use module_domain, only: domain
 use wrf_netcdf, only : grid_info, nf90_max_name, nf90_float
+
+
+
 implicit none
+include 'mpif.h'
 
 ! default file names
 character(len=*),parameter::inputfile='fire_input.nc'
@@ -187,7 +191,7 @@ subroutine read_info(filename,info)
   info%io_nfirex=dims(1)
   info%io_nfirey=dims(2)
   !info%ntimes=dims(3)
-  info%ntimes=61
+  info%ntimes=25
   info%dim_fire_x=dimnames(1)
   info%dim_fire_y=dimnames(2)
   !info%dim_time=dimnames(3)
@@ -517,7 +521,7 @@ subroutine read_step_vars(filename,info, iframe, grid, ierr)
   type(adios2_variable) :: adios_var
   type(adios2_attribute) :: adios2_attr
 
-  integer:: tmp
+  integer:: tmp, ierr2, status
 
   !*** executable
   if(debug_print_f)write(*,'(3a,i4)')'read_step_vars: reading file ',trim(filename) 
@@ -536,8 +540,15 @@ subroutine read_step_vars(filename,info, iframe, grid, ierr)
 
   ! TODO: I need to print this time
   if(debug_print_f)write(*,'(2a)')'Time ',info%times
+  write (*, *) "## Now begin Step", iframe
 #endif
-  call adios2_begin_step(adios2_id, ierr)
+  call adios2_begin_step(adios2_id, adios2_step_mode_read, 120.0, status, ierr)
+  !call adios2_begin_step(adios2_id, ierr)
+  if (status == adios2_step_status_end_of_stream) then
+    call adios2_close(adios2_id, ierr)
+    ierr = adios2_step_status_end_of_stream
+    return
+  end if
   
   call read_real(adios2_id,iframe,var_unit_fxlong,grid%unit_fxlong)
   call read_real(adios2_id,iframe,var_unit_fxlat,grid%unit_fxlat)
@@ -586,7 +597,12 @@ subroutine check(ierr,msg,cont)
 subroutine init_adios2(ierr)
   implicit none
   integer, intent(out) :: ierr
-  call adios2_init(adios, ierr)
+  integer comm_size, comm_rank
+
+  call MPI_INIT(ierr)
+  call MPI_COMM_SIZE(MPI_COMM_WORLD, comm_size, ierr)
+  call MPI_COMM_RANK(MPI_COMM_WORLD, comm_rank, ierr)
+  call adios2_init(adios, 'adios2.xml', MPI_COMM_WORLD, ierr)
 end subroutine init_adios2
 
 subroutine finalize_adios2(ierr)
