@@ -4,18 +4,12 @@
 # This script is executed from compile em_fire
 # The directories are destroyed by clean -a
 
-mkdir -p two_fires_netcdf two_fires_adios2 rain
+mkdir -p two_fires rain
 
-( cd two_fires_netcdf; ln -s ../../../main/ideal.exe . ;  ln -s ../../../main/wrf.exe . ; \
+( cd two_fires; ln -s ../../../main/ideal.exe . ;  ln -s ../../../main/wrf.exe . ; \
   ln -s ../input_sounding_two_fires input_sounding ; \
   ln -s ../namelist.fire_two_fires namelist.fire ; \
-  ln -s ../namelist.input_two_fires.netcdf namelist.input )
-
-( cd two_fires_adios2; ln -s ../../../main/ideal.exe . ;  ln -s ../../../main/wrf.exe . ; \
-  ln -s ../input_sounding_two_fires input_sounding ; \
-  ln -s ../namelist.fire_two_fires namelist.fire ; \
-  ln -s ../namelist.input_two_fires.adios2 namelist.input )
-
+  ln -s ../namelist.input_two_fires namelist.input )
 
 ( cd rain; ln -s ../../../main/ideal.exe . ;  ln -s ../../../main/wrf.exe . ; \
   ln -s ../input_sounding_rain input_sounding ; \

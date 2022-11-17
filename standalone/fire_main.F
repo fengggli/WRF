@@ -43,7 +43,8 @@ integer::  &                ! fire mesh dimensions
 ! I/O interface
 ! character(len=*),parameter::inputfile='fire_input.nc'
 #ifdef USE_ADIOS2
-  character(len=*),parameter::inputfile='fire_input.bp'
+  !character(len=*),parameter::inputfile='fire_input.bp'
+  character(len=*),parameter::inputfile='wrfout_d01_0001-01-01_00:00:00'
 #else
   character(len=*),parameter::inputfile='fire_input.nc'
 #endif
