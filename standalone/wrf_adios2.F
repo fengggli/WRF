@@ -164,7 +164,7 @@ subroutine read_global_info(adios2_id,info, ierr)
   character(len=NF90_MAX_NAME)::dimnames(mdims),dimname,stagname,stagnames(mdims)
   character(len=*), parameter:: subgrid='_subgrid'
 
-  integer:: status
+  integer:: status = adios2_step_status_not_ready
 
   !*** executable
   
@@ -190,8 +190,17 @@ subroutine read_global_info(adios2_id,info, ierr)
 
 
   ! attributes
+  do while (status == adios2_step_status_not_ready)
+    write (*,*) "Stream not ready, sleep 1 sec..."
+    call sleep(1)
+    call adios2_begin_step(adios2_id, adios2_step_mode_read, 120.0, status, ierr)
+  enddo
 
-  !call adios2_begin_step(adios2_id, adios2_step_mode_read, 120.0, status, ierr)
+  if (status /= adios2_step_status_ok) then
+    ierr = -1
+    call check(ierr)
+    return
+  endif
   !call adios2_begin_step(adios2_id, ierr)
   ! if (status == adios2_step_status_end_of_stream) then
     
@@ -204,7 +213,7 @@ subroutine read_global_info(adios2_id,info, ierr)
   info%io_nfirex=dims(1)
   info%io_nfirey=dims(2)
   !info%ntimes=dims(3)
-  info%ntimes=25
+  info%ntimes=100
   info%dim_fire_x=dimnames(1)
   info%dim_fire_y=dimnames(2)
   !info%dim_time=dimnames(3)
@@ -249,7 +258,7 @@ subroutine read_global_info(adios2_id,info, ierr)
 
   endif
 
-  !call adios2_end_step(adios2_id, ierr)
+  call adios2_end_step(adios2_id, ierr)
 
   
 

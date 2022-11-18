@@ -234,8 +234,7 @@ else
   uniform=.false.
   ! advances to the third step
 #ifdef USE_ADIOS2
-  ! the first two steps
-  call read_step_vars(adios2_id, info, cur_step, grid, ierr)
+  ! this is the second step (first step is read in read_global_var)
   call read_step_vars(adios2_id, info, cur_step, grid, ierr)
 #else
   call read_vars(inputfile,info,2,grid)
