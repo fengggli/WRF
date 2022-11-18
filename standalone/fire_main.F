@@ -14,7 +14,8 @@ use wrf_netcdf, only : grid_info, &
 !#define USE_ADIOS2
 
 #ifdef USE_ADIOS2
-use wrf_adios2, only : read_info, read_step_vars, init_adios2, finalize_adios2
+use adios2, only: adios2_engine
+use wrf_adios2, only : read_global_info, read_step_vars, init_adios2, finalize_adios2
 #else
   use wrf_netcdf, only: read_info, read_vars
 #endif
@@ -70,8 +71,9 @@ integer:: ierr
 
 #ifdef USE_ADIOS2 
 integer::cur_step=1
+type(adios2_engine) :: adios2_id
 
-call init_adios2(ierr)
+
 #endif
 
 
@@ -83,8 +85,12 @@ call set_flags(config_flags)               ! copy configuration flags to sfire i
 debug_print = config_flags%fire_print_msg.ge.2 ! if we write a lot
 debug_print = config_flags%fire_print_msg.ge.1 ! if we write a lot
 
-
-call read_info(inputfile,info)             ! get dimensions
+#ifdef USE_ADIOS2
+call init_adios2(inputfile,adios2_id, ierr)
+call read_global_info(adios2_id,info, ierr)             ! get dimensions
+#else
+  call read_info(inputfile,info)  
+#endif
 
 ! start empty NetCDF file with the dimensions
 ! not here, may want to overwrite something
@@ -218,7 +224,7 @@ if(info%ntimes.lt.3)then
   !call crash('need at least 3 steps')
   uniform=.true.
 #ifdef USE_ADIOS2
-  call read_step_vars(inputfile, info, cur_step, grid, ierr)
+  call read_step_vars(adios2_id, info, cur_step, grid, ierr)
 #else
   call read_vars(inputfile,info,1,grid)
 #endif
@@ -228,8 +234,9 @@ else
   uniform=.false.
   ! advances to the third step
 #ifdef USE_ADIOS2
-  call read_step_vars(inputfile, info, cur_step, grid, ierr)
-  call read_step_vars(inputfile, info, cur_step, grid, ierr)
+  ! the first two steps
+  call read_step_vars(adios2_id, info, cur_step, grid, ierr)
+  call read_step_vars(adios2_id, info, cur_step, grid, ierr)
 #else
   call read_vars(inputfile,info,2,grid)
 #endif
@@ -266,7 +273,7 @@ ifun_start=1
 do iframe=iframe_start,iframe_end ! interval ending with iframe
   if(.not.uniform)then
 #ifdef USE_ADIOS2
-    call read_step_vars(inputfile, info, cur_step, grid, ierr)
+    call read_step_vars(adios2_id, info, cur_step, grid, ierr)
     if (ierr == 2) then ! "2" is adios2_step_status_end_of_stream
       write(*, *) 'not more steps, now exiting !'
       exit
@@ -342,7 +349,7 @@ do iframe=iframe_start,iframe_end ! interval ending with iframe
 enddo
 
 #ifdef USE_ADIOS2
-call finalize_adios2(ierr)
+call finalize_adios2(adios2_id, ierr)
 #endif
 
 end subroutine sub_main

@@ -135,9 +135,8 @@ character(len=nf90_max_name),parameter::var_times='Times'
 integer, parameter::max_times_length=19
 
 
-type(adios2_adios):: adios
-type(adios2_io) :: ioGet
-
+type(adios2_adios):: adios ! ADIOS
+type(adios2_io) :: ioGet ! IO
 
 
 contains
@@ -146,29 +145,29 @@ contains
 !*** READING 
 !
 
-subroutine read_info(filename,info)
+subroutine read_global_info(adios2_id,info, ierr)
   ! get fire grid sizes from input file
   implicit none
-
-
   !*** arguments
-  character(len=*),intent(in)::filename
+
+  type(adios2_engine), intent(in)::adios2_id 
   type(grid_info),intent(inout)::info
+  integer, intent(out):: ierr
 
   !*** local
-
-  type(adios2_engine) :: adios2_id
   type(adios2_attribute):: adios2_attr
 
-  integer::ierr,it,ndims,idim,ratio,stagid,i
+  integer::it,ndims,idim,ratio,stagid,i
   integer,dimension(mdims)::dims,sr,dimids,stag
   real::dx,dy
   character(len=128)::msg
   character(len=NF90_MAX_NAME)::dimnames(mdims),dimname,stagname,stagnames(mdims)
   character(len=*), parameter:: subgrid='_subgrid'
 
+  integer:: status
+
   !*** executable
-  call adios2_declare_io(ioGet, adios, 'WRFOUT', ierr)
+  
 
   ! Feng:
   ! First read all dims information, look at VAR_NAME/Dims
@@ -185,9 +184,23 @@ subroutine read_info(filename,info)
     
   ! get dimensions
   ! NFUEL_CAT
-  call read_var_info(filename,var_nfuel_cat,ndims,dims,dimnames)
+  
 
   ! store in info what you can now
+
+
+  ! attributes
+
+  !call adios2_begin_step(adios2_id, adios2_step_mode_read, 120.0, status, ierr)
+  !call adios2_begin_step(adios2_id, ierr)
+  ! if (status == adios2_step_status_end_of_stream) then
+    
+  !   ierr = adios2_step_status_end_of_stream
+  !   return
+  ! end if
+  ! use engine as parmeter, and call begin step ahead of it
+  call read_var_info(var_nfuel_cat,ndims,dims,dimnames)
+
   info%io_nfirex=dims(1)
   info%io_nfirey=dims(2)
   !info%ntimes=dims(3)
@@ -196,10 +209,6 @@ subroutine read_info(filename,info)
   info%dim_fire_y=dimnames(2)
   !info%dim_time=dimnames(3)
   info%dim_time="Time"
-
-  ! attributes
-
-  call adios2_open(adios2_id, ioGet, filename, adios2_mode_read, ierr )
 
   call att_read(adios2_id,'DX',info%fdx)
   call att_read(adios2_id,'DY',info%fdy)
@@ -237,9 +246,12 @@ subroutine read_info(filename,info)
       write(msg,'(a,2i5)')'bad subgrid refinement ratios',sr(1),sr(2)
       call crash(msg)
     endif
+
   endif
 
-  call adios2_close(adios2_id, ierr)
+  !call adios2_end_step(adios2_id, ierr)
+
+  
 
   ! store the rest in info
   info%nfirex=dims(1)
@@ -263,10 +275,10 @@ subroutine read_info(filename,info)
     write(*,'(3(a,f8.4,1x))')'stepsizes fdx=',info%fdx,'fdy=',info%fdy,'dt=',info%dt
   endif
 
-end subroutine read_info
+end subroutine read_global_info
 
 subroutine att_read(adios2_id,att_name,att_val)
-  type(adios2_engine), intent(in)::adios2_id
+  type(adios2_engine), intent(in)::adios2_id 
   character(len=*),intent(in)::att_name
   real, intent(out)::att_val
 
@@ -295,8 +307,8 @@ subroutine print_var_info(filename,varname)
   character(len=NF90_MAX_NAME)::dimnames(mdims)
 
   !*** executable
-  if(debug_print)write(*,'(4a)')'reading file ',filename,' dimensions of variable ',trim(varname)
-  call read_var_info(filename,varname,ndims,dimlengths,dimnames)
+  if(debug_print)write(*,'(4a)')'reading from adios2 io',' dimensions of variable ',trim(varname)
+  call read_var_info(varname,ndims,dimlengths,dimnames)
   if(debug_print)write(*,'(3a,4(2a,i5,1x))')'variable ',trim(varname),' dimensions ', &
     (trim(dimnames(i)),'=',dimlengths(i),i=1,ndims)
 
@@ -305,13 +317,12 @@ end subroutine print_var_info
 
 
 
-subroutine read_var_info(filename,varname,ndims,dimlengths,dimnames,type)
+subroutine read_var_info(varname,ndims,dimlengths,dimnames,type)
 
   ! get variable dimensions from a file
   implicit none
 
   ! arguments
-  character(len=*), intent(in):: filename ! variable name
   character(len=*), intent(in):: varname ! variable name
   integer, intent(out)::ndims            ! number of dimensions of this variable
   integer, intent(out)::dimlengths(mdims)      ! the dimensions
@@ -319,7 +330,7 @@ subroutine read_var_info(filename,varname,ndims,dimlengths,dimnames,type)
   integer, intent(out), optional :: type
 
   ! local
-  type(adios2_engine) :: adios2_id
+ 
   type(adios2_variable) :: adios2_var
   type(adios2_attribute) :: adios2_attr
   integer::ierr
@@ -332,9 +343,9 @@ subroutine read_var_info(filename,varname,ndims,dimlengths,dimnames,type)
   allocate(Buffer(1), STAT=ierr)
 
   ! executable
-  if(debug_print)write(*,'(4a)')'reading file ',trim(filename),' variable ',trim(varname)
-  call adios2_open(adios2_id, ioGet, filename, adios2_mode_read, ierr )
-  call check(ierr)
+  if(debug_print)write(*,'(4a)')'reading from ADIOS2',' variable ',trim(varname)
+  !call adios2_open(adios2_id, ioGet, filename, adios2_mode_read, ierr )
+  !call check(ierr)
 
   !call check(nf90_inq_varid(adios2_id, varname, varid))
   !call check(nf90_inquire_variable(adios2_id,varid,ndims=ndims,xtype=xtype))
@@ -380,7 +391,7 @@ subroutine read_var_info(filename,varname,ndims,dimlengths,dimnames,type)
       if(debug_print)write(*,*) 'got dimension length',dimlen
       dimlengths(idim) = dimlen  
   enddo
-  call adios2_close(adios2_id, ierr)
+  !call adios2_close(adios2_id, ierr)
   if(present(type)) type=xtype
   2 format(3a,i4,a,(4i6))
   if(debug_print)write(*,2)'variable ',trim(varname), &
@@ -499,7 +510,7 @@ subroutine read_fire_var(adios2_id,info,iframe,varname,v)
   
   end subroutine read_fire_var
 
-subroutine read_step_vars(filename,info, iframe, grid, ierr)
+subroutine read_step_vars(adios2_id,info, iframe, grid, ierr)
   ! read all variables from input file
   ! compared with the netcdf version, this doesn't not have a iframe (cannot specify which step to read)
   ! but calling this function once will advance a step (iframe will +=1)
@@ -507,7 +518,7 @@ subroutine read_step_vars(filename,info, iframe, grid, ierr)
   implicit none
 
   !*** arguments
-  character(len=*),intent(in)::filename ! the input file
+  type(adios2_engine), intent(in) :: adios2_id ! engine
   type(grid_info),intent(inout)::info   ! dimensions
   integer, intent(inout):: iframe          ! number of frame in the file (not used by ADIOS2)
   type(domain),intent(inout)::grid      ! the mother of all arrays
@@ -517,15 +528,14 @@ subroutine read_step_vars(filename,info, iframe, grid, ierr)
   integer::varid
   integer,dimension(4)::s,c
 
-  type(adios2_engine) :: adios2_id
   type(adios2_variable) :: adios_var
   type(adios2_attribute) :: adios2_attr
 
   integer:: tmp, ierr2, status
 
   !*** executable
-  if(debug_print_f)write(*,'(3a,i4)')'read_step_vars: reading file ',trim(filename) 
-  call adios2_open(adios2_id, ioGet, filename, adios2_mode_read, ierr)
+  if(debug_print_f)write(*,*)'read_step_vars: reading from ADIOS2' 
+  !call adios2_open(adios2_id, ioGet, filename, adios2_mode_read, ierr)
 
   !call check(nf90_inq_varid(adios2_id,var_times,varid),'cannot find '//trim(var_times))
   !call check(nf90_get_var(adios2_id,varid,info%times,start=(/1,iframe/),count=(/info%len_time_string,1/)), &
@@ -545,7 +555,7 @@ subroutine read_step_vars(filename,info, iframe, grid, ierr)
   call adios2_begin_step(adios2_id, adios2_step_mode_read, 120.0, status, ierr)
   !call adios2_begin_step(adios2_id, ierr)
   if (status == adios2_step_status_end_of_stream) then
-    call adios2_close(adios2_id, ierr)
+    
     ierr = adios2_step_status_end_of_stream
     return
   end if
@@ -569,7 +579,7 @@ subroutine read_step_vars(filename,info, iframe, grid, ierr)
 
   call adios2_end_step(adios2_id, ierr)
 
-  call adios2_close(adios2_id, ierr)
+  !call adios2_close(adios2_id, ierr)
 end subroutine read_step_vars
 
 
@@ -594,8 +604,10 @@ subroutine check(ierr,msg,cont)
   endif
   end subroutine check
 
-subroutine init_adios2(ierr)
+subroutine init_adios2(filename, adios2_id, ierr)
   implicit none
+  character(len=*), intent(in)::filename
+  type(adios2_engine), intent(out) :: adios2_id ! engine
   integer, intent(out) :: ierr
   integer comm_size, comm_rank
 
@@ -603,12 +615,19 @@ subroutine init_adios2(ierr)
   call MPI_COMM_SIZE(MPI_COMM_WORLD, comm_size, ierr)
   call MPI_COMM_RANK(MPI_COMM_WORLD, comm_rank, ierr)
   call adios2_init(adios, 'adios2.xml', MPI_COMM_WORLD, ierr)
+  call adios2_declare_io(ioGet, adios, filename, ierr)
+
+  call adios2_open(adios2_id, ioGet, filename, adios2_mode_read, ierr )
+  call check(ierr)
 end subroutine init_adios2
 
-subroutine finalize_adios2(ierr)
+subroutine finalize_adios2(adios2_id, ierr)
   implicit none
+  type(adios2_engine), intent(inout) :: adios2_id ! engine
   integer, intent(out) :: ierr
 
+  call adios2_close(adios2_id, ierr)
+  call check(ierr)
   call adios2_finalize(adios, ierr)
 end subroutine finalize_adios2
 
