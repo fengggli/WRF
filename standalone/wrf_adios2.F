@@ -624,7 +624,7 @@ subroutine init_adios2(filename, adios2_id, ierr)
   call MPI_COMM_SIZE(MPI_COMM_WORLD, comm_size, ierr)
   call MPI_COMM_RANK(MPI_COMM_WORLD, comm_rank, ierr)
   call adios2_init(adios, 'adios2.xml', MPI_COMM_WORLD, ierr)
-  call adios2_declare_io(ioGet, adios, filename, ierr)
+  call adios2_declare_io(ioGet, adios, 'fire_input', ierr)
 
   call adios2_open(adios2_id, ioGet, filename, adios2_mode_read, ierr )
   call check(ierr)

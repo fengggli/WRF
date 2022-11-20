@@ -23,13 +23,16 @@ implicit none
 
 contains 
 
-subroutine sub_main
+subroutine sub_main(output_suffix)
 
 !*** purpose: standalone driver with compatible files to WRF-Fire
 
 implicit none
 
 !*** local
+
+! suffix to distinguish different fire instances' output
+character(len=32), intent(in)::output_suffix
 
 ! arguments to SFIRE
 
@@ -49,7 +52,9 @@ integer::  &                ! fire mesh dimensions
 #else
   character(len=*),parameter::inputfile='fire_input.nc'
 #endif
-character(len=*),parameter::outputfile='fire_output.nc'
+
+character(len=32)::outputfile='fire_output.nc'
+
 real, pointer, dimension(:,:) ::  uf1=> null(), vf1=> null(), uf2=> null(), vf2=> null(), fmc_g1=> null(), fmc_g2=> null()   ! stored input fields
 
 ! other derived types
@@ -78,6 +83,8 @@ type(adios2_engine) :: adios2_id
 
 
 !*** executable
+outputfile = trim(outputfile)//'.'//trim(output_suffix)
+write (*,*) 'Starting: going to write to: ' // outputfile
 
 call read_namelist(config_flags)           ! read flags from namelist.input
 call set_flags(config_flags)               ! copy configuration flags to sfire internal structures
@@ -469,5 +476,12 @@ end module module_fire_standalone
 program fire
 use module_fire_standalone, only: sub_main
 
-call  sub_main
+character(len=32)           :: output_suffix = 'default'
+
+
+if (command_argument_count() > 0) then
+  call get_command_argument(1, output_suffix)
+endif
+
+call  sub_main(output_suffix)
 end program fire
