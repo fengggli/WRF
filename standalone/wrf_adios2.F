@@ -638,6 +638,7 @@ subroutine finalize_adios2(adios2_id, ierr)
   call adios2_close(adios2_id, ierr)
   call check(ierr)
   call adios2_finalize(adios, ierr)
+  call MPI_FINALIZE(ierr)
 end subroutine finalize_adios2
 
 
