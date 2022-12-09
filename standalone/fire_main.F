@@ -11,7 +11,9 @@ use module_configure, only: grid_config_rec_type,read_namelist
 use wrf_netcdf, only : grid_info, &
                        create_output_file,write_vars, &
                        debug_print
+use mpi
 !#define USE_ADIOS2
+#define ENABLE_TIMER
 
 #ifdef USE_ADIOS2
 use adios2, only: adios2_engine
@@ -81,6 +83,17 @@ type(adios2_engine) :: adios2_id
 
 #endif
 
+! timers
+#ifdef ENABLE_TIMER
+integer:: fno=34
+double precision:: time_init
+double precision:: time_finalize
+
+double precision:: time_read_start
+double precision:: time_read_end
+double precision:: time_cal_end
+double precision:: time_write_end
+#endif
 
 !*** executable
 outputfile = trim(outputfile)//'.'//trim(output_suffix)
@@ -94,6 +107,14 @@ debug_print = config_flags%fire_print_msg.ge.1 ! if we write a lot
 
 #ifdef USE_ADIOS2
 call init_adios2(inputfile,adios2_id, ierr)
+
+#ifdef ENABLE_TIMER
+time_init = MPI_Wtime()
+open(unit=fno, file='time.stat', action="write")
+write (fno, *) 'iframe, time_read_start, time_read_end, time_cal_end, time_write_end'
+flush(fno)
+#endif
+
 call read_global_info(adios2_id,info, ierr)             ! get dimensions
 #else
   call read_info(inputfile,info)  
@@ -278,6 +299,9 @@ itimestep = 0
 ifun_start=1
 do iframe=iframe_start,iframe_end ! interval ending with iframe
   if(.not.uniform)then
+  
+  time_read_start = MPI_Wtime() - time_init
+
 #ifdef USE_ADIOS2
     call read_step_vars(adios2_id, info, cur_step, grid, ierr)
     if (ierr == 2) then ! "2" is adios2_step_status_end_of_stream
@@ -287,6 +311,9 @@ do iframe=iframe_start,iframe_end ! interval ending with iframe
 #else
     call read_vars(inputfile,info,iframe,grid)
 #endif
+
+  time_read_end= MPI_Wtime() - time_init
+
     uf2=grid%uf
     vf2=grid%vf
     fmc_g2=grid%fmc_g
@@ -346,16 +373,30 @@ do iframe=iframe_start,iframe_end ! interval ending with iframe
     enddo
     ifun_start=3
   enddo
+
+  time_cal_end = MPI_Wtime() - time_init
+
   call write_vars(outputfile,grid,info,iframe)
+
+  time_write_end= MPI_Wtime() - time_init
+  
   if(.not.uniform)then
     uf1=uf2
     vf1=vf2
     fmc_g1=fmc_g2
   endif
+
+  write (fno, '(i3,f10.3,f10.3,f10.3,f10.3)') iframe, time_read_start, time_read_end, time_cal_end, time_write_end
+  flush(fno)
 enddo
 
 #ifdef USE_ADIOS2
 call finalize_adios2(adios2_id, ierr)
+#endif
+
+#ifdef ENABLE_TIMER
+time_finalize= MPI_Wtime()
+close(fno)
 #endif
 
 end subroutine sub_main
