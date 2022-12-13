@@ -11,8 +11,12 @@ use module_configure, only: grid_config_rec_type,read_namelist
 use wrf_netcdf, only : grid_info, &
                        create_output_file,write_vars, &
                        debug_print
+
+!# fengggli: start
 use mpi
 !#define USE_ADIOS2
+! whether to write output to fire.output.x
+! #define ENABLE_OUTPUT  
 #define ENABLE_TIMER
 
 #ifdef USE_ADIOS2
@@ -21,6 +25,8 @@ use wrf_adios2, only : read_global_info, read_step_vars, init_adios2, finalize_a
 #else
   use wrf_netcdf, only: read_info, read_vars
 #endif
+
+!# fengggli: ends
 implicit none
 
 contains 
@@ -376,8 +382,9 @@ do iframe=iframe_start,iframe_end ! interval ending with iframe
 
   time_cal_end = MPI_Wtime() - time_init
 
-  call write_vars(outputfile,grid,info,iframe)
-
+#ifdef ENABLE_OUTPUT
+call write_vars(outputfile,grid,info,iframe)
+#endif
   time_write_end= MPI_Wtime() - time_init
   
   if(.not.uniform)then

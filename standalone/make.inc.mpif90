@@ -1,5 +1,6 @@
 FFREE=-ffree-form -ffree-line-length-none
 FFIXED=-ffixed-form
-FCFLAGS=-g -DGFORTRAN_IARGC
+# FCFLAGS=-g -DGFORTRAN_IARGC
+FCFLAGS=-O2 -ftree-vectorize -funroll-loops -DGFORTRAN_IARGC 
 FC=mpif90
 FP=mpif90

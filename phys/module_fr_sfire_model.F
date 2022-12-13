@@ -6,6 +6,7 @@ module module_fr_sfire_model
 use module_fr_sfire_core
 use module_fr_sfire_util
 use module_fr_sfire_phys
+use mpi
 
 implicit none
 
@@ -138,7 +139,13 @@ character(len=128)::msg
 logical:: freeze_fire
 real::fireline_mask=0.
 
+double precision:: wtime_start
+double precision:: wtime_end
+
 !*** executable
+wtime_start = MPI_Wtime()
+write(msg,'(a,i3,i3)') "iswl:entry:sfire_model:", id, ifun
+call message(msg, level=0)
 
 call check_mesh_2dim(ifts-1,ifte+1,jfts-1,jfte+1,ifms,ifme,jfms,jfme)
 
@@ -583,6 +590,9 @@ else
 !$OMP END CRITICAL(SFIRE_MODEL_CRIT)
     call crash(msg)
 endif
+
+write(msg,'(a,i3,i3,f10.6)') "iswl:timer:sfire_model:", id, ifun, MPI_Wtime()-wtime_start
+call message(msg, level=0)
 
 end subroutine sfire_model
 

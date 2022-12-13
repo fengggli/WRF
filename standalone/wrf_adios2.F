@@ -484,7 +484,8 @@ subroutine read_fire_var(adios2_id,info,iframe,varname,v)
   integer(kind=8), dimension(2) :: istart, icount
   integer:: ierr, i, j
 
-  real, pointer:: v2(:,:)
+  ! real, pointer:: v2(:,:)
+  real, allocatable:: v2(:,:)
 
   !*** executable
   nx=info%nfirex
@@ -510,6 +511,7 @@ subroutine read_fire_var(adios2_id,info,iframe,varname,v)
   call check(ierr)
   call adios2_get(adios2_id, adios_var, v2, adios2_mode_sync,ierr)
 
+  ! v has larger bounds +5 in each side.
   do j=1,ny
     do i=1,nx
       v(i,j)=v2(i,j)
